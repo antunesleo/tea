@@ -27,36 +27,14 @@ func (rh *RegisterHandler) Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	body, err := io.ReadAll(r.Body)
+	var registerPayload RegisterHandlerPayload
+	err := json.NewDecoder(r.Body).Decode(&registerPayload)
 	if err != nil {
 		http.Error(w, "Error reading request body", http.StatusInternalServerError)
 		return
 	}
 
-	var registerPayload RegisterHandlerPayload
-	err = json.Unmarshal(body, &registerPayload)
-	if err != nil {
-		errorMsg := fmt.Sprintf("Error parsing JSON body: %v", err)
-		http.Error(w, errorMsg, http.StatusBadRequest)
-		return
-	}
-
-	missingFields := []string{}
-	if registerPayload.RequestBody == nil {
-		missingFields = append(missingFields, "requestBody")
-	}
-	if registerPayload.Headers == nil {
-		missingFields = append(missingFields, "headers")
-	}
-	if registerPayload.ResponseBody == nil {
-		missingFields = append(missingFields, "responseBody")
-	}
-	if registerPayload.URL == "" {
-		missingFields = append(missingFields, "url")
-	}
-	if registerPayload.Method == "" {
-		missingFields = append(missingFields, "method")
-	}
+	missingFields := rh.validateMissingFields(registerPayload)
 
 	if len(missingFields) > 0 {
 		errorMessage := fmt.Sprintf("Missing mandatory fields: %v", missingFields)
@@ -75,11 +53,31 @@ func (rh *RegisterHandler) Handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "Registed the request successfully!")
 }
 
+func (*RegisterHandler) validateMissingFields(registerPayload RegisterHandlerPayload) []string {
+	missingFields := []string{}
+	if registerPayload.RequestBody == nil {
+		missingFields = append(missingFields, "requestBody")
+	}
+	if registerPayload.Headers == nil {
+		missingFields = append(missingFields, "headers")
+	}
+	if registerPayload.ResponseBody == nil {
+		missingFields = append(missingFields, "responseBody")
+	}
+	if registerPayload.URL == "" {
+		missingFields = append(missingFields, "url")
+	}
+	if registerPayload.Method == "" {
+		missingFields = append(missingFields, "method")
+	}
+	return missingFields
+}
+
 type UnderTestRequest struct {
 	RequestBody json.RawMessage   `json:"requestBody"`
 	Headers     map[string]string `json:"headers"`
-	Method      string
-	URL         string
+	Method      string            `json:"method"`
+	URL         string            `json:url`
 }
 
 type ApiUnderTestHandler struct {
