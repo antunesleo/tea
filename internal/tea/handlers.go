@@ -57,6 +57,10 @@ func (rh *RegisterHandler) Handler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 }
 
+func NewRegisterHandler(rs *RequestsStore) *RegisterHandler {
+	return &RegisterHandler{RequestsStore: rs}
+}
+
 func (*RegisterHandler) validateMissingFields(registerPayload RegisterHandlerPayload) []string {
 	missingFields := []string{}
 	if registerPayload.RequestBody == nil {

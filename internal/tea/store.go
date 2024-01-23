@@ -61,3 +61,7 @@ func (rs *RequestsStore) MatchRequest(underTestReq *UnderTestRequest) (bool, Sto
 	}
 	return false, StoredRequest{}
 }
+
+func NewRequestsStore() *RequestsStore {
+	return &RequestsStore{}
+}
