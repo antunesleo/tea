@@ -9,6 +9,11 @@ import (
 	"github.com/antunesleo/tea/internal/map_utils"
 )
 
+type ErrorResponse struct {
+	Error   string `json: "error"`
+	Message string `json: "message"`
+}
+
 type RegisterHandlerPayload struct {
 	RequestBody  json.RawMessage   `json:"requestBody"`
 	Headers      map[string]string `json:"headers"`
@@ -30,7 +35,7 @@ func (rh *RegisterHandler) Handler(w http.ResponseWriter, r *http.Request) {
 	var registerPayload RegisterHandlerPayload
 	err := json.NewDecoder(r.Body).Decode(&registerPayload)
 	if err != nil {
-		http.Error(w, "Error reading request body", http.StatusInternalServerError)
+		http.Error(w, "Error decoding request body", http.StatusBadRequest)
 		return
 	}
 
@@ -50,7 +55,6 @@ func (rh *RegisterHandler) Handler(w http.ResponseWriter, r *http.Request) {
 		URL:          registerPayload.URL,
 	})
 	w.WriteHeader(http.StatusCreated)
-	fmt.Fprint(w, "Registed the request successfully!")
 }
 
 func (*RegisterHandler) validateMissingFields(registerPayload RegisterHandlerPayload) []string {

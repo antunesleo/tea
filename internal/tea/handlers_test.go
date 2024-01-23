@@ -29,7 +29,7 @@ func TestRegisterHandler(t *testing.T) {
 	if err != nil {
 		t.Error("failed to encode request")
 	}
-	req := httptest.NewRequest("POST", "/register-request", &reqBuffer)
+	req := httptest.NewRequest(http.MethodPost, "/register-request", &reqBuffer)
 
 	rs := &RequestsStore{}
 	registerHandler := &RegisterHandler{RequestsStore: rs}
@@ -37,8 +37,7 @@ func TestRegisterHandler(t *testing.T) {
 	handler := http.HandlerFunc(registerHandler.Handler)
 	handler.ServeHTTP(rr, req)
 
-	if status := rr.Code; status != http.StatusCreated {
-		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	if rr.Code != http.StatusCreated {
+		t.Errorf("handler returned wrong status code: got %v want %v", rr.Code, http.StatusOK)
 	}
-
 }
