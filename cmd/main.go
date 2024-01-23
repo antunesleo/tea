@@ -9,8 +9,8 @@ import (
 
 func main() {
 	rs := &tea.RequestsStore{}
-	registerHandler := tea.RegisterHandler{rs}
-	apiUnderTestHandler := tea.ApiUnderTestHandler{rs}
+	registerHandler := tea.RegisterHandler{RequestsStore: rs}
+	apiUnderTestHandler := tea.ApiUnderTestHandler{RequestsStore: rs}
 	http.HandleFunc("/register-request", registerHandler.Handler)
 	http.HandleFunc("/", apiUnderTestHandler.Handler)
 	fmt.Println("Server is running on port 7111")

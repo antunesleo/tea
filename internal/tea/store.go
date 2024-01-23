@@ -13,6 +13,7 @@ type StoredRequest struct {
 	Headers      map[string]string
 	ResponseBody json.RawMessage
 	Method       string
+	URL          string
 }
 
 type RequestsStore struct {
@@ -29,22 +30,30 @@ func (rs *RequestsStore) MatchRequest(underTestReq *UnderTestRequest) (bool, Sto
 			continue
 		}
 
-		var data1, data2 interface{}
-		if err := json.Unmarshal(storedReq.RequestBody, &data1); err != nil {
+		var storedBody, underTestBody interface{}
+		if err := json.Unmarshal(storedReq.RequestBody, &storedBody); err != nil {
 			fmt.Println("Error unmarshaling rawMessage1:", err)
 			return false, StoredRequest{} // TODO: refactor to return error
 		}
 
-		if err := json.Unmarshal(underTestReq.RequestBody, &data2); err != nil {
+		if err := json.Unmarshal(underTestReq.RequestBody, &underTestBody); err != nil {
 			fmt.Println("Error unmarshaling rawMessage2:", err)
 			return false, StoredRequest{} // TODO: refactor to return error
 		}
 
-		if !reflect.DeepEqual(data1, data2) {
+		if !reflect.DeepEqual(storedBody, underTestBody) {
 			continue
 		}
 
 		if !map_utils.MapsEqual(storedReq.Headers, underTestReq.Headers) {
+			continue
+		}
+
+		if storedReq.Method != underTestReq.Method {
+			continue
+		}
+
+		if storedReq.URL != underTestReq.URL {
 			continue
 		}
 

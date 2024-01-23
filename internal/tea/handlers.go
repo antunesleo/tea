@@ -12,7 +12,9 @@ import (
 type RegisterHandlerPayload struct {
 	RequestBody  json.RawMessage   `json:"requestBody"`
 	Headers      map[string]string `json:"headers"`
-	ResponseBody json.RawMessage   `json:"ResponseBody"`
+	ResponseBody json.RawMessage   `json:"responseBody"`
+	URL          string            `json:url`
+	Method       string            `json:Method`
 }
 
 type RegisterHandler struct {
@@ -47,7 +49,13 @@ func (rh *RegisterHandler) Handler(w http.ResponseWriter, r *http.Request) {
 		missingFields = append(missingFields, "headers")
 	}
 	if registerPayload.ResponseBody == nil {
-		missingFields = append(missingFields, "ResponseBody")
+		missingFields = append(missingFields, "responseBody")
+	}
+	if registerPayload.URL == "" {
+		missingFields = append(missingFields, "url")
+	}
+	if registerPayload.Method == "" {
+		missingFields = append(missingFields, "method")
 	}
 
 	if len(missingFields) > 0 {
@@ -60,7 +68,8 @@ func (rh *RegisterHandler) Handler(w http.ResponseWriter, r *http.Request) {
 		RequestBody:  registerPayload.RequestBody,
 		Headers:      registerPayload.Headers,
 		ResponseBody: registerPayload.ResponseBody,
-		Method:       r.Method,
+		Method:       registerPayload.Method,
+		URL:          registerPayload.URL,
 	})
 	w.WriteHeader(http.StatusCreated)
 	fmt.Fprint(w, "Registed the request successfully!")
@@ -70,6 +79,7 @@ type UnderTestRequest struct {
 	RequestBody json.RawMessage   `json:"requestBody"`
 	Headers     map[string]string `json:"headers"`
 	Method      string
+	URL         string
 }
 
 type ApiUnderTestHandler struct {
@@ -83,7 +93,12 @@ func (h *ApiUnderTestHandler) Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	matched, storeRequest := h.RequestsStore.MatchRequest(
-		&UnderTestRequest{RequestBody: body, Method: r.Method, Headers: map_utils.HeaderToMap(r.Header)},
+		&UnderTestRequest{
+			RequestBody: body,
+			Method:      r.Method,
+			Headers:     map_utils.HeaderToMap(r.Header),
+			URL:         r.URL.Path,
+		},
 	)
 	if matched {
 		w.Header().Set("Content-Type", "application/json")
