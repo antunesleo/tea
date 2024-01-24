@@ -16,7 +16,8 @@ type ExpectedRequest struct {
 }
 
 type WantedResponse struct {
-	Body json.RawMessage
+	Body       json.RawMessage
+	StatusCode int
 }
 
 type StoredRequest struct {

@@ -19,7 +19,8 @@ func TestRegisterHandler(t *testing.T) {
 			"headers": map[string]string{"h1": "v1"},
 		},
 		"wantedResponse": map[string]any{
-			"body": map[string]string{"b": "c"},
+			"body":       map[string]string{"b": "c"},
+			"statusCode": http.StatusOK,
 		},
 	}
 	reqBuffer := reqBufferFromPayload(payload, t)
@@ -42,7 +43,8 @@ func TestRegisterHandlerBadRequest(t *testing.T) {
 				"method": http.MethodPost,
 			},
 			"wantedResponse": map[string]any{
-				"body": map[string]string{"b": "c"},
+				"body":       map[string]string{"b": "c"},
+				"statusCode": http.StatusOK,
 			},
 		}
 		reqBuffer := reqBufferFromPayload(payload, t)
@@ -66,7 +68,9 @@ func TestRegisterHandlerBadRequest(t *testing.T) {
 				"method":  http.MethodPost,
 				"headers": map[string]string{"h1": "v1"},
 			},
-			"wantedResponse": map[string]any{},
+			"wantedResponse": map[string]any{
+				"statusCode": http.StatusOK,
+			},
 		}
 
 		reqBuffer := reqBufferFromPayload(payload, t)
@@ -90,7 +94,10 @@ func TestRegisterHandlerBadRequest(t *testing.T) {
 				"headers": map[string]string{"h1": "v1"},
 			},
 			"wantedResponse": map[string]any{
-				"body": map[string]string{"b": "c"},
+				"body": map[string]any{
+					"b":          "c",
+					"statusCode": http.StatusOK,
+				},
 			},
 		}
 
@@ -115,7 +122,38 @@ func TestRegisterHandlerBadRequest(t *testing.T) {
 				"headers": map[string]string{"h1": "v1"},
 			},
 			"wantedResponse": map[string]any{
-				"body": map[string]string{"b": "c"},
+				"body": map[string]any{
+					"b":          "c",
+					"statusCode": http.StatusOK,
+				},
+			},
+		}
+
+		reqBuffer := reqBufferFromPayload(payload, t)
+		req := httptest.NewRequest(http.MethodPost, "/register-request", &reqBuffer)
+
+		registerHandler := NewRegisterHandler(NewRequestsStore())
+		responseRecorder := httptest.NewRecorder()
+		handler := http.HandlerFunc(registerHandler.Handler)
+		handler.ServeHTTP(responseRecorder, req)
+
+		assertStatusCode(responseRecorder.Code, http.StatusBadRequest, t)
+	})
+
+	t.Run("missing wanted response status code", func(t *testing.T) {
+		payload := map[string]any{
+			"expectedRequest": map[string]any{
+				"body": map[string]string{
+					"a": "b",
+				},
+				"url":     "/randomjoke/1",
+				"headers": map[string]string{"h1": "v1"},
+				"method":  http.MethodPost,
+			},
+			"wantedResponse": map[string]any{
+				"body": map[string]any{
+					"b": "c",
+				},
 			},
 		}
 
@@ -133,6 +171,7 @@ func TestRegisterHandlerBadRequest(t *testing.T) {
 }
 
 func assertStatusCode(got, want int, t *testing.T) {
+	t.Helper()
 	if got != want {
 		t.Errorf("handler returned wrong status code: got %v want %v", got, want)
 	}
