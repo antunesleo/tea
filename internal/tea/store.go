@@ -8,12 +8,20 @@ import (
 	"github.com/antunesleo/tea/internal/map_utils"
 )
 
+type ExpectedRequest struct {
+	Body    json.RawMessage
+	Headers map[string]string
+	Method  string
+	URL     string
+}
+
+type WantedResponse struct {
+	Body json.RawMessage
+}
+
 type StoredRequest struct {
-	RequestBody  json.RawMessage
-	Headers      map[string]string
-	ResponseBody json.RawMessage
-	Method       string
-	URL          string
+	ExpectedRequest ExpectedRequest
+	WantedResponse  WantedResponse
 }
 
 type RequestsStore struct {
@@ -26,34 +34,36 @@ func (rs *RequestsStore) Register(storedRequest *StoredRequest) {
 
 func (rs *RequestsStore) MatchRequest(underTestReq *UnderTestRequest) (bool, StoredRequest) {
 	for _, storedReq := range rs.storedRequests {
-		if storedReq.Method != underTestReq.Method {
+		if storedReq.ExpectedRequest.Method != underTestReq.Method {
 			continue
 		}
 
-		var storedBody, underTestBody interface{}
-		if err := json.Unmarshal(storedReq.RequestBody, &storedBody); err != nil {
-			fmt.Println("Error unmarshaling rawMessage1:", err)
-			return false, StoredRequest{} // TODO: refactor to return error
+		if len(storedReq.ExpectedRequest.Body) != 0 {
+			var storedBody, underTestBody interface{}
+			if err := json.Unmarshal(storedReq.ExpectedRequest.Body, &storedBody); err != nil {
+				fmt.Println("Error unmarshaling rawMessage1:", err)
+				return false, StoredRequest{} // TODO: refactor to return error
+			}
+
+			if err := json.Unmarshal(underTestReq.RequestBody, &underTestBody); err != nil {
+				fmt.Println("Error unmarshaling rawMessage2:", err)
+				return false, StoredRequest{} // TODO: refactor to return error
+			}
+
+			if !reflect.DeepEqual(storedBody, underTestBody) {
+				continue
+			}
 		}
 
-		if err := json.Unmarshal(underTestReq.RequestBody, &underTestBody); err != nil {
-			fmt.Println("Error unmarshaling rawMessage2:", err)
-			return false, StoredRequest{} // TODO: refactor to return error
-		}
-
-		if !reflect.DeepEqual(storedBody, underTestBody) {
+		if !map_utils.MapsEqual(storedReq.ExpectedRequest.Headers, underTestReq.Headers) {
 			continue
 		}
 
-		if !map_utils.MapsEqual(storedReq.Headers, underTestReq.Headers) {
+		if storedReq.ExpectedRequest.Method != underTestReq.Method {
 			continue
 		}
 
-		if storedReq.Method != underTestReq.Method {
-			continue
-		}
-
-		if storedReq.URL != underTestReq.URL {
+		if storedReq.ExpectedRequest.URL != underTestReq.URL {
 			continue
 		}
 

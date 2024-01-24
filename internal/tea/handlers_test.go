@@ -10,11 +10,17 @@ import (
 
 func TestRegisterHandler(t *testing.T) {
 	payload := map[string]any{
-		"requestBody":  map[string]string{"a": "b"},
-		"headers":      map[string]string{"h1": "v1"},
-		"responseBody": map[string]string{"b": "c"},
-		"url":          "/test",
-		"method":       http.MethodPost,
+		"expectedRequest": map[string]any{
+			"body": map[string]string{
+				"a": "b",
+			},
+			"url":     "/randomjoke/1",
+			"method":  http.MethodPost,
+			"headers": map[string]string{"h1": "v1"},
+		},
+		"wantedResponse": map[string]any{
+			"body": map[string]string{"b": "c"},
+		},
 	}
 	reqBuffer := reqBufferFromPayload(payload, t)
 	req := httptest.NewRequest(http.MethodPost, "/register-request", &reqBuffer)
@@ -26,12 +32,41 @@ func TestRegisterHandler(t *testing.T) {
 }
 
 func TestRegisterHandlerBadRequest(t *testing.T) {
-	t.Run("missing request body", func(t *testing.T) {
+	t.Run("missing expected request headers", func(t *testing.T) {
 		payload := map[string]any{
-			"headers":      map[string]string{"h1": "v1"},
-			"responseBody": map[string]string{"b": "c"},
-			"url":          "/test",
-			"method":       http.MethodPost,
+			"expectedRequest": map[string]any{
+				"body": map[string]string{
+					"a": "b",
+				},
+				"url":    "/randomjoke/1",
+				"method": http.MethodPost,
+			},
+			"wantedResponse": map[string]any{
+				"body": map[string]string{"b": "c"},
+			},
+		}
+		reqBuffer := reqBufferFromPayload(payload, t)
+		req := httptest.NewRequest(http.MethodPost, "/register-request", &reqBuffer)
+
+		registerHandler := NewRegisterHandler(NewRequestsStore())
+		responseRecorder := httptest.NewRecorder()
+		handler := http.HandlerFunc(registerHandler.Handler)
+		handler.ServeHTTP(responseRecorder, req)
+
+		assertStatusCode(responseRecorder.Code, http.StatusBadRequest, t)
+	})
+
+	t.Run("missing wanted response body", func(t *testing.T) {
+		payload := map[string]any{
+			"expectedRequest": map[string]any{
+				"body": map[string]string{
+					"a": "b",
+				},
+				"url":     "/randomjoke/1",
+				"method":  http.MethodPost,
+				"headers": map[string]string{"h1": "v1"},
+			},
+			"wantedResponse": map[string]any{},
 		}
 
 		reqBuffer := reqBufferFromPayload(payload, t)
@@ -45,12 +80,18 @@ func TestRegisterHandlerBadRequest(t *testing.T) {
 		assertStatusCode(responseRecorder.Code, http.StatusBadRequest, t)
 	})
 
-	t.Run("missing headers", func(t *testing.T) {
+	t.Run("missing expected request url", func(t *testing.T) {
 		payload := map[string]any{
-			"requestBody":  map[string]string{"a": "b"},
-			"responseBody": map[string]string{"b": "c"},
-			"url":          "/test",
-			"method":       http.MethodPost,
+			"expectedRequest": map[string]any{
+				"body": map[string]string{
+					"a": "b",
+				},
+				"method":  http.MethodPost,
+				"headers": map[string]string{"h1": "v1"},
+			},
+			"wantedResponse": map[string]any{
+				"body": map[string]string{"b": "c"},
+			},
 		}
 
 		reqBuffer := reqBufferFromPayload(payload, t)
@@ -64,50 +105,18 @@ func TestRegisterHandlerBadRequest(t *testing.T) {
 		assertStatusCode(responseRecorder.Code, http.StatusBadRequest, t)
 	})
 
-	t.Run("missing responseBody", func(t *testing.T) {
+	t.Run("missing expected request method", func(t *testing.T) {
 		payload := map[string]any{
-			"requestBody": map[string]string{"a": "b"},
-			"headers":     map[string]string{"h1": "v1"},
-			"url":         "/test",
-			"method":      http.MethodPost,
-		}
-
-		reqBuffer := reqBufferFromPayload(payload, t)
-		req := httptest.NewRequest(http.MethodPost, "/register-request", &reqBuffer)
-
-		registerHandler := NewRegisterHandler(NewRequestsStore())
-		responseRecorder := httptest.NewRecorder()
-		handler := http.HandlerFunc(registerHandler.Handler)
-		handler.ServeHTTP(responseRecorder, req)
-
-		assertStatusCode(responseRecorder.Code, http.StatusBadRequest, t)
-	})
-
-	t.Run("missing url", func(t *testing.T) {
-		payload := map[string]any{
-			"requestBody":  map[string]string{"a": "b"},
-			"headers":      map[string]string{"h1": "v1"},
-			"responseBody": map[string]string{"b": "c"},
-			"method":       http.MethodPost,
-		}
-
-		reqBuffer := reqBufferFromPayload(payload, t)
-		req := httptest.NewRequest(http.MethodPost, "/register-request", &reqBuffer)
-
-		registerHandler := NewRegisterHandler(NewRequestsStore())
-		responseRecorder := httptest.NewRecorder()
-		handler := http.HandlerFunc(registerHandler.Handler)
-		handler.ServeHTTP(responseRecorder, req)
-
-		assertStatusCode(responseRecorder.Code, http.StatusBadRequest, t)
-	})
-
-	t.Run("missing method", func(t *testing.T) {
-		payload := map[string]any{
-			"requestBody":  map[string]string{"a": "b"},
-			"headers":      map[string]string{"h1": "v1"},
-			"responseBody": map[string]string{"b": "c"},
-			"url":          "/test",
+			"expectedRequest": map[string]any{
+				"body": map[string]string{
+					"a": "b",
+				},
+				"url":     "/randomjoke/1",
+				"headers": map[string]string{"h1": "v1"},
+			},
+			"wantedResponse": map[string]any{
+				"body": map[string]string{"b": "c"},
+			},
 		}
 
 		reqBuffer := reqBufferFromPayload(payload, t)

@@ -14,12 +14,20 @@ type ErrorResponse struct {
 	Message string `json: "message"`
 }
 
+type ExpectedRequestPayload struct {
+	Body    json.RawMessage   `json:"body"`
+	Headers map[string]string `json:"headers"`
+	Method  string            `json:"method"`
+	URL     string            `json:"url"`
+}
+
+type WantedResponsePayload struct {
+	Body json.RawMessage `json:"body"`
+}
+
 type RegisterHandlerPayload struct {
-	RequestBody  json.RawMessage   `json:"requestBody"`
-	Headers      map[string]string `json:"headers"`
-	ResponseBody json.RawMessage   `json:"responseBody"`
-	URL          string            `json:url`
-	Method       string            `json:Method`
+	ExpectedRequest ExpectedRequestPayload `json:"expectedRequest"`
+	WantedResponse  WantedResponsePayload  `json:"wantedResponse"`
 }
 
 type RegisterHandler struct {
@@ -48,11 +56,15 @@ func (rh *RegisterHandler) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rh.RequestsStore.Register(&StoredRequest{
-		RequestBody:  registerPayload.RequestBody,
-		Headers:      registerPayload.Headers,
-		ResponseBody: registerPayload.ResponseBody,
-		Method:       registerPayload.Method,
-		URL:          registerPayload.URL,
+		ExpectedRequest: ExpectedRequest{
+			Body:    registerPayload.ExpectedRequest.Body,
+			Headers: registerPayload.ExpectedRequest.Headers,
+			Method:  registerPayload.ExpectedRequest.Method,
+			URL:     registerPayload.ExpectedRequest.URL,
+		},
+		WantedResponse: WantedResponse{
+			Body: registerPayload.WantedResponse.Body,
+		},
 	})
 	w.WriteHeader(http.StatusCreated)
 }
@@ -63,20 +75,17 @@ func NewRegisterHandler(rs *RequestsStore) *RegisterHandler {
 
 func (*RegisterHandler) validateMissingFields(registerPayload RegisterHandlerPayload) []string {
 	missingFields := []string{}
-	if registerPayload.RequestBody == nil {
-		missingFields = append(missingFields, "requestBody")
-	}
-	if registerPayload.Headers == nil {
+	if registerPayload.ExpectedRequest.Headers == nil {
 		missingFields = append(missingFields, "headers")
 	}
-	if registerPayload.ResponseBody == nil {
-		missingFields = append(missingFields, "responseBody")
-	}
-	if registerPayload.URL == "" {
+	if registerPayload.ExpectedRequest.URL == "" {
 		missingFields = append(missingFields, "url")
 	}
-	if registerPayload.Method == "" {
+	if registerPayload.ExpectedRequest.Method == "" {
 		missingFields = append(missingFields, "method")
+	}
+	if registerPayload.WantedResponse.Body == nil {
+		missingFields = append(missingFields, "responseBody")
 	}
 	return missingFields
 }
@@ -109,7 +118,7 @@ func (h *ApiUnderTestHandler) Handler(w http.ResponseWriter, r *http.Request) {
 	if matched {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write(storeRequest.ResponseBody)
+		w.Write(storeRequest.WantedResponse.Body)
 		return
 	}
 
