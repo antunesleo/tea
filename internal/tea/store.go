@@ -19,6 +19,7 @@ type ExpectedRequest struct {
 type WantedResponse struct {
 	Body       json.RawMessage
 	StatusCode int
+	Headers    map[string]string
 }
 
 type StoredRequest struct {
@@ -34,7 +35,7 @@ func (rs *RequestsStore) Register(storedRequest *StoredRequest) {
 	rs.storedRequests = append(rs.storedRequests, storedRequest)
 }
 
-func (rs *RequestsStore) MatchRequest(underTestReq *UnderTestRequest) (error, StoredRequest) {
+func (rs *RequestsStore) MatchRequest(underTestReq *UnderTestRequest) (*StoredRequest, error) {
 	for _, storedReq := range rs.storedRequests {
 		if storedReq.ExpectedRequest.Method != underTestReq.Method {
 			continue
@@ -44,12 +45,12 @@ func (rs *RequestsStore) MatchRequest(underTestReq *UnderTestRequest) (error, St
 			var storedBody, underTestBody interface{}
 			if err := json.Unmarshal(storedReq.ExpectedRequest.Body, &storedBody); err != nil {
 				fmt.Println("Error unmarshaling rawMessage1:", err)
-				return err, StoredRequest{} // TODO: refactor to return error
+				return &StoredRequest{}, err
 			}
 
 			if err := json.Unmarshal(underTestReq.RequestBody, &underTestBody); err != nil {
 				fmt.Println("Error unmarshaling rawMessage2:", err)
-				return err, StoredRequest{} // TODO: refactor to return error
+				return &StoredRequest{}, err
 			}
 
 			if !reflect.DeepEqual(storedBody, underTestBody) {
@@ -57,7 +58,10 @@ func (rs *RequestsStore) MatchRequest(underTestReq *UnderTestRequest) (error, St
 			}
 		}
 
-		if !map_utils.MapsEqual(storedReq.ExpectedRequest.Headers, underTestReq.Headers) {
+		if !map_utils.MapsEqual(
+			map_utils.LowercaseMap(storedReq.ExpectedRequest.Headers),
+			map_utils.LowercaseMap(underTestReq.Headers),
+		) {
 			continue
 		}
 
@@ -69,9 +73,9 @@ func (rs *RequestsStore) MatchRequest(underTestReq *UnderTestRequest) (error, St
 			continue
 		}
 
-		return nil, *storedReq
+		return storedReq, nil
 	}
-	return errors.New("couldn't match any request"), StoredRequest{}
+	return &StoredRequest{}, errors.New("couldn't match any request")
 }
 
 func NewRequestsStore() *RequestsStore {

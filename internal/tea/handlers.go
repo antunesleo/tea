@@ -22,8 +22,9 @@ type ExpectedRequestPayload struct {
 }
 
 type WantedResponsePayload struct {
-	Body       json.RawMessage `json:"body"`
-	StatusCode int             `json:"statusCode`
+	Body       json.RawMessage   `json:"body"`
+	StatusCode int               `json:"statusCode`
+	Headers    map[string]string `json:"headers"`
 }
 
 type RegisterHandlerPayload struct {
@@ -66,6 +67,7 @@ func (rh *RegisterHandler) Handler(w http.ResponseWriter, r *http.Request) {
 		WantedResponse: WantedResponse{
 			Body:       registerPayload.WantedResponse.Body,
 			StatusCode: registerPayload.WantedResponse.StatusCode,
+			Headers:    registerPayload.WantedResponse.Headers,
 		},
 	})
 	w.WriteHeader(http.StatusCreated)
@@ -77,20 +79,17 @@ func NewRegisterHandler(rs *RequestsStore) *RegisterHandler {
 
 func (*RegisterHandler) validateMissingFields(registerPayload RegisterHandlerPayload) []string {
 	missingFields := []string{}
-	if registerPayload.ExpectedRequest.Headers == nil {
-		missingFields = append(missingFields, "expectedResponse.headers")
-	}
 	if registerPayload.ExpectedRequest.URL == "" {
-		missingFields = append(missingFields, "expectedResponse.url")
+		missingFields = append(missingFields, "expectedRequest.url")
 	}
 	if registerPayload.ExpectedRequest.Method == "" {
-		missingFields = append(missingFields, "expectedResponse.method")
+		missingFields = append(missingFields, "expectedRequest.method")
 	}
 	if registerPayload.WantedResponse.Body == nil {
 		missingFields = append(missingFields, "wantedResponse.body")
 	}
 	if registerPayload.WantedResponse.StatusCode == 0 {
-		missingFields = append(missingFields, "wantedResponse.body")
+		missingFields = append(missingFields, "wantedResponse.statusCode")
 	}
 	return missingFields
 }
@@ -112,7 +111,7 @@ func (h *ApiUnderTestHandler) Handler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error reading request body", http.StatusInternalServerError)
 		return
 	}
-	err, storeRequest := h.RequestsStore.MatchRequest(
+	storeRequest, err := h.RequestsStore.MatchRequest(
 		&UnderTestRequest{
 			RequestBody: body,
 			Method:      r.Method,
@@ -120,12 +119,19 @@ func (h *ApiUnderTestHandler) Handler(w http.ResponseWriter, r *http.Request) {
 			URL:         r.URL.Path,
 		},
 	)
-	if err != nil {
+	if err == nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(storeRequest.WantedResponse.StatusCode)
 		w.Write(storeRequest.WantedResponse.Body)
+		for key, value := range storeRequest.WantedResponse.Headers {
+			w.Header().Set(key, value)
+		}
 		return
 	}
 
 	http.Error(w, "Unconfigured call", http.StatusNotFound)
+}
+
+func NewApiUnderTestHandler(rs *RequestsStore) *ApiUnderTestHandler {
+	return &ApiUnderTestHandler{RequestsStore: rs}
 }
