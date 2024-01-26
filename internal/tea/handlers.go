@@ -112,7 +112,7 @@ func (h *ApiUnderTestHandler) Handler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error reading request body", http.StatusInternalServerError)
 		return
 	}
-	matched, storeRequest := h.RequestsStore.MatchRequest(
+	err, storeRequest := h.RequestsStore.MatchRequest(
 		&UnderTestRequest{
 			RequestBody: body,
 			Method:      r.Method,
@@ -120,7 +120,7 @@ func (h *ApiUnderTestHandler) Handler(w http.ResponseWriter, r *http.Request) {
 			URL:         r.URL.Path,
 		},
 	)
-	if matched {
+	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(storeRequest.WantedResponse.StatusCode)
 		w.Write(storeRequest.WantedResponse.Body)

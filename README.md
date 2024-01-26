@@ -1,3 +1,2 @@
 # tea
-External API double for integration tests
-
+External API double for integration testing

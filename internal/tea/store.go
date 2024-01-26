@@ -2,6 +2,7 @@ package tea
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 
@@ -33,7 +34,7 @@ func (rs *RequestsStore) Register(storedRequest *StoredRequest) {
 	rs.storedRequests = append(rs.storedRequests, storedRequest)
 }
 
-func (rs *RequestsStore) MatchRequest(underTestReq *UnderTestRequest) (bool, StoredRequest) {
+func (rs *RequestsStore) MatchRequest(underTestReq *UnderTestRequest) (error, StoredRequest) {
 	for _, storedReq := range rs.storedRequests {
 		if storedReq.ExpectedRequest.Method != underTestReq.Method {
 			continue
@@ -43,12 +44,12 @@ func (rs *RequestsStore) MatchRequest(underTestReq *UnderTestRequest) (bool, Sto
 			var storedBody, underTestBody interface{}
 			if err := json.Unmarshal(storedReq.ExpectedRequest.Body, &storedBody); err != nil {
 				fmt.Println("Error unmarshaling rawMessage1:", err)
-				return false, StoredRequest{} // TODO: refactor to return error
+				return err, StoredRequest{} // TODO: refactor to return error
 			}
 
 			if err := json.Unmarshal(underTestReq.RequestBody, &underTestBody); err != nil {
 				fmt.Println("Error unmarshaling rawMessage2:", err)
-				return false, StoredRequest{} // TODO: refactor to return error
+				return err, StoredRequest{} // TODO: refactor to return error
 			}
 
 			if !reflect.DeepEqual(storedBody, underTestBody) {
@@ -68,9 +69,9 @@ func (rs *RequestsStore) MatchRequest(underTestReq *UnderTestRequest) (bool, Sto
 			continue
 		}
 
-		return true, *storedReq
+		return nil, *storedReq
 	}
-	return false, StoredRequest{}
+	return errors.New("couldn't match any request"), StoredRequest{}
 }
 
 func NewRequestsStore() *RequestsStore {
